@@ -15,20 +15,21 @@ from odoo.exceptions import ValidationError, UserError
 class SchoolAttendance(models.Model):
     """
     Attendance Model
-    
+
     Tracks daily attendance for students in courses.
-    
+
     Concepts covered:
     - Datetime fields
     - Unique constraint with multiple fields
     - Batch operations
     - Scheduled actions (cron)
     """
-    _name = 'school.attendance'
-    _description = 'Student Attendance'
-    _order = 'date desc, check_in desc'
-    _rec_name = 'display_name'
-    
+
+    _name = "school.attendance"
+    _description = "Student Attendance"
+    _order = "date desc, check_in desc"
+    _rec_name = "display_name"
+
     # ==========================================================================
     # TODO 1: Define Basic Fields
     # ==========================================================================
@@ -40,18 +41,31 @@ class SchoolAttendance(models.Model):
     # - remarks: Text (reason for absence, etc.)
     # - is_excused: Boolean (whether absence is excused)
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Basic Fields
     date = fields.Date(
-        string='Date',
+        string="Date",
         required=True,
         default=fields.Date.today,
         index=True,
     )
     # TODO: Add remaining basic fields
+    check_in = fields.Datetime(string="Check In")
+    check_out = fields.Datetime(string="Check Out")
+    status = fields.Selection(
+        [
+            ("present", "Present"),
+            ("absent", "Absent"),
+            ("late", "Late"),
+            ("excused", "Excused"),
+            ("half_day", "Half Day"),
+        ],
+        string="Status",
+    )
 
-    
-    
+    remarks = fields.Char(string="Remark")
+    is_excused = fields.Boolean(string="Is Excused")
+
     # ==========================================================================
     # TODO 2: Define Relational Fields
     # ==========================================================================
@@ -59,10 +73,18 @@ class SchoolAttendance(models.Model):
     # - course_id: Many2one to 'school.course', required, ondelete='cascade'
     # - recorded_by: Many2one to 'res.users', default=current user
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Relational Fields
-    
-    
+    student_id = fields.Many2one(
+        "school.student", required=True, ondelete="cascade", string="Student ID"
+    )
+    course_id = fields.Many2one(
+        "school.course", required=True, ondelete="cascade", string="Course ID"
+    )
+    recorded_by = fields.Many2one(
+        "res.users", default=lambda self: self.env.user, string="Recorded By"
+    )
+
     # ==========================================================================
     # TODO 3: Define Computed Fields
     # ==========================================================================
@@ -71,23 +93,36 @@ class SchoolAttendance(models.Model):
     # - is_on_time: Boolean, True if check_in before 9:00 AM
     # - day_of_week: Selection, computed from date (monday, tuesday, etc.)
     # ==========================================================================
-    
+
     display_name = fields.Char(
-        string='Display Name',
-        compute='_compute_display_name',
+        string="Display Name",
+        compute="_compute_display_name",
         store=True,
     )
-    
-    @api.depends('student_id', 'course_id', 'date', 'status')
+
+    @api.depends("student_id", "course_id", "date", "status")
     def _compute_display_name(self):
         """TODO: Implement display name"""
         for record in self:
-            # YOUR CODE HERE
-            record.display_name = ''
-    
+            student_name = record.student_id.name or "NA"
+            course_name = record.course_id.name or "NA"
+
+            record.display_name = (
+                f"{student_name} - {course_name} - {record.date} ({status})".strip()
+            )
+
     # TODO: Implement remaining computed fields
-    
-    
+
+    duration_hours = fields.Float(
+        string="Duration Hours", compute="_compute_duration_hours", store=True
+    )
+
+    @api.depends("check_in", "check_out")
+    def _compute_duration_hours(self):
+        for record in self:
+            duration = record.check_out - record.check_in
+            record.duration_hours = duration.total_seconds() / 3600.0
+
     # ==========================================================================
     # TODO 4: Define Constraints
     # ==========================================================================
@@ -99,32 +134,48 @@ class SchoolAttendance(models.Model):
     # - date cannot be in the future
     # - Student must be enrolled in the course
     # ==========================================================================
-    
-    _sql_constraints = [
-        ('unique_attendance', 'UNIQUE(student_id, course_id, date)', 
-         'Attendance already recorded for this student in this course on this date!'),
-    ]
-    
-    @api.constrains('check_in', 'check_out')
+
+    unique_attendance = models.Constraint(
+        "UNIQUE(student_id, course_id, date)",
+        "Attendance already recorded for this student in this course on this date!",
+    )
+
+    @api.constrains("check_in", "check_out")
     def _check_times(self):
         """TODO: Validate check_out is after check_in"""
         for record in self:
             # YOUR CODE HERE
-            pass
-    
+            if record.check_out >= record.check_in:
+                raise ValidationError("Check Out must be after Check in")
+
     # TODO: Implement remaining constraints
-    
-    
+    @api.constrains("date")
+    def _check_date(self):
+        for record in self:
+            if record.date > fields.Date.today():
+                raise ValidationError("Date Cannot Be in The Future")
+    # Remain one constraint
+
     # ==========================================================================
     # TODO 5: Implement Onchange Methods
     # ==========================================================================
     # - _onchange_check_in: If check_in is after 9:00, suggest status='late'
     # - _onchange_status: If status is 'excused', set is_excused=True
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Onchange methods
-    
-    
+    @api.onchange('check_in')
+    def _onchange_check_in(self):
+        if self.check_in.hour > 9:
+            self.status='late'
+            
+    @api.onchange('status')
+    def _onchange_status(self):
+        if self.status =="excused":
+            self.is_excused=True
+                
+            
+
     # ==========================================================================
     # TODO 6: Implement Business Methods
     # ==========================================================================
@@ -133,20 +184,19 @@ class SchoolAttendance(models.Model):
     # - get_student_attendance_summary(student_id, date_from, date_to):
     #   Returns attendance statistics for a student in date range
     # ==========================================================================
-    
+
     def mark_present(self):
         """TODO: Mark attendance as present with current time"""
         # YOUR CODE HERE
         pass
-    
+
     def mark_absent(self):
         """TODO: Mark attendance as absent"""
         # YOUR CODE HERE
         pass
-    
+
     # TODO: Implement remaining methods
-    
-    
+
     # ==========================================================================
     # TODO 7: Implement Batch/Bulk Operations
     # ==========================================================================
@@ -155,7 +205,7 @@ class SchoolAttendance(models.Model):
     # - bulk_mark_present(ids): Marks multiple records as present
     # - bulk_mark_absent(ids): Marks multiple records as absent
     # ==========================================================================
-    
+
     @api.model
     def bulk_create_attendance(self, course_id, attendance_date=None):
         """
@@ -164,17 +214,16 @@ class SchoolAttendance(models.Model):
         """
         if attendance_date is None:
             attendance_date = fields.Date.today()
-        
+
         # YOUR CODE HERE
         # 1. Get course and its confirmed enrollments
         # 2. For each enrolled student, create attendance record if not exists
         # 3. Return created records
-        
-        return self.env['school.attendance']
-    
+
+        return self.env["school.attendance"]
+
     # TODO: Implement bulk_mark_present and bulk_mark_absent
-    
-    
+
     # ==========================================================================
     # TODO 8: Implement Scheduled Action Method
     # ==========================================================================
@@ -182,7 +231,7 @@ class SchoolAttendance(models.Model):
     #   records for all active courses every day
     # - _cron_send_absence_notifications(): Send notifications for absent students
     # ==========================================================================
-    
+
     @api.model
     def _cron_create_daily_attendance(self):
         """
@@ -191,10 +240,9 @@ class SchoolAttendance(models.Model):
         """
         # YOUR CODE HERE
         pass
-    
+
     # TODO: Implement _cron_send_absence_notifications
-    
-    
+
     # ==========================================================================
     # TODO 9: Implement Reporting Methods
     # ==========================================================================
@@ -203,7 +251,7 @@ class SchoolAttendance(models.Model):
     # - get_student_attendance_percentage(student_id, course_id=None):
     #   Returns attendance percentage for a student
     # ==========================================================================
-    
+
     @api.model
     def get_attendance_report(self, date_from, date_to, course_id=None):
         """
@@ -211,20 +259,20 @@ class SchoolAttendance(models.Model):
         Use read_group for efficient aggregation
         """
         domain = [
-            ('date', '>=', date_from),
-            ('date', '<=', date_to),
+            ("date", ">=", date_from),
+            ("date", "<=", date_to),
         ]
         if course_id:
-            domain.append(('course_id', '=', course_id))
-        
+            domain.append(("course_id", "=", course_id))
+
         # YOUR CODE HERE - Use read_group to aggregate data
-        
+
         return {
-            'total_records': 0,
-            'present_count': 0,
-            'absent_count': 0,
-            'late_count': 0,
-            'attendance_rate': 0.0,
+            "total_records": 0,
+            "present_count": 0,
+            "absent_count": 0,
+            "late_count": 0,
+            "attendance_rate": 0.0,
         }
-    
+
     # TODO: Implement get_student_attendance_percentage
