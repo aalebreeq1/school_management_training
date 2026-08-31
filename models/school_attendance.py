@@ -174,8 +174,6 @@ class SchoolAttendance(models.Model):
         if self.status =="excused":
             self.is_excused=True
                 
-            
-
     # ==========================================================================
     # TODO 6: Implement Business Methods
     # ==========================================================================
