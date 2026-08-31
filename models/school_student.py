@@ -123,10 +123,8 @@ class SchoolStudent(models.Model):
     class_id=fields.One2many(
         "school.course",
         string="Primary Class",
-        ondelete="restrict"
-        
+        ondelete="restrict"  
     )
-
     # ==========================================================================
     # TODO 3: Define Selection Field for State
     # ==========================================================================
@@ -140,6 +138,13 @@ class SchoolStudent(models.Model):
     # ==========================================================================
 
     # YOUR CODE HERE - State Field
+    state=fields.Selection([
+        ("draft", "Draft"),
+        ("enrolled","Enrolled"),
+        ("graduated","Graduated"),
+        ("suspended","Suspended"),
+        ("withdrawn","Withdrawn"),
+    ],string="State", tracking=True)
 
     # ==========================================================================
     # TODO 4: Define Computed Fields
