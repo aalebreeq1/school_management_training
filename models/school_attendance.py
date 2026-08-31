@@ -238,8 +238,6 @@ class SchoolAttendance(models.Model):
             "attendance_rate": round(attendance_rate, 2),
         }
 
-    # - status: Selection (present, absent, late, excused, half_day)
-
     # ==========================================================================
     # TODO 7: Implement Batch/Bulk Operations
     # ==========================================================================

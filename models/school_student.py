@@ -16,10 +16,10 @@ from odoo.exceptions import ValidationError, UserError
 class SchoolStudent(models.Model):
     """
     Student Model
-    
+
     This model represents a student in the school system.
     Students can enroll in courses, receive grades, and have attendance tracked.
-    
+
     Concepts covered:
     - Basic field types (Char, Text, Date, Selection, Boolean, Integer, Float)
     - Relational fields (Many2one, One2many, Many2many)
@@ -32,12 +32,13 @@ class SchoolStudent(models.Model):
     - SQL constraints
     - State machine pattern
     """
-    _name = 'school.student'
-    _description = 'Student'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'name asc'
-    _rec_name = 'display_name'
-    
+
+    _name = "school.student"
+    _description = "Student"
+    _inherit = ["mail.thread", "mail.activity.mixin"]
+    _order = "name asc"
+    _rec_name = "display_name"
+
     # ==========================================================================
     # TODO 1: Define Basic Fields
     # ==========================================================================
@@ -54,17 +55,34 @@ class SchoolStudent(models.Model):
     # - active: Boolean field with default True
     # - notes: Html field
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Basic Fields
     student_code = fields.Char(
-        string='Student Code',
+        string="Student Code",
         readonly=True,
         copy=False,
-        default=lambda self: _('New'),
+        default=lambda self: _("New"),
     )
     # TODO: Add remaining basic fields below
-    
-    
+    name = fields.Char(string="Name", required=True, tracking=True)
+    last_name = fields.Char(string="Last Name", required=True)
+    email = fields.Char(string="Email")
+    phone = fields.Char(string="Phone")
+    date_of_birth = fields.Date(
+        string="Date of Birth",
+        required=True,
+    )
+    gender = fields.Selection(
+        [
+            ("male", "Male"),
+            ("female", "Female"),
+        ],
+        string="Gender",
+    )
+    address = fields.Text(string="Address")
+    photo = fields.Binary(string="Student Photo")
+    active = fields.Boolean(string="Active", default=True)
+    notes = fields.Html(string="Notes")
     # ==========================================================================
     # TODO 2: Define Relational Fields
     # ==========================================================================
@@ -76,10 +94,39 @@ class SchoolStudent(models.Model):
     # - attendance_ids: One2many to 'school.attendance' (inverse: student_id)
     # - class_id: Many2one to 'school.course' for current primary class
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Relational Fields
-    
-    
+    guardian_id = fields.Many2one(
+        "res.partner",
+        string="Guardian",
+    )
+    enrollment_ids = fields.One2many(
+        "school.enrollment", inverse_name="student_id", string="Enrollment"
+    )
+    course_ids = fields.Many2many(
+        "school.course",
+        related="school_student_course_rel",
+        column1="student_id",
+        column2="course_id",
+        string="Courses",
+    )
+    grade_ids=fields.One2many(
+        "school.grade",
+        inverse_name="student_id,
+        string="Grades"
+    )
+    attendance_ids=fields.One2many(
+        "school.attendance",
+        inverse_name="student_id",
+        string="Attendances"
+    )
+    class_id=fields.One2many(
+        "school.course",
+        string="Primary Class",
+        ondelete="restrict"
+        
+    )
+
     # ==========================================================================
     # TODO 3: Define Selection Field for State
     # ==========================================================================
@@ -91,15 +138,14 @@ class SchoolStudent(models.Model):
     # - withdrawn: Withdrawn
     # Default should be 'draft', and it should have tracking=True
     # ==========================================================================
-    
+
     # YOUR CODE HERE - State Field
-    
-    
+
     # ==========================================================================
     # TODO 4: Define Computed Fields
     # ==========================================================================
     # Implement the following computed fields:
-    # 
+    #
     # 4.1 display_name: Combines name and last_name
     #     - Should compute as "last_name, name" (e.g., "Smith, John")
     #     - Depends on: name, last_name
@@ -120,18 +166,18 @@ class SchoolStudent(models.Model):
     #     - Calculate percentage of 'present' attendance records
     #     - Depends on: attendance_ids.status
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Computed Fields
     display_name = fields.Char(
-        string='Display Name',
-        compute='_compute_display_name',
+        string="Display Name",
+        compute="_compute_display_name",
         store=True,
     )
-    
+
     # TODO: Add age, total_courses, average_grade, attendance_rate fields
     # TODO: Implement all compute methods below
-    
-    @api.depends('name', 'last_name')
+
+    @api.depends("name", "last_name")
     def _compute_display_name(self):
         """
         TODO: Implement display_name computation
@@ -141,16 +187,15 @@ class SchoolStudent(models.Model):
         for record in self:
             # YOUR CODE HERE
             pass
-    
+
     # TODO: Implement _compute_age method
-    
+
     # TODO: Implement _compute_total_courses method
-    
+
     # TODO: Implement _compute_average_grade method
-    
+
     # TODO: Implement _compute_attendance_rate method
-    
-    
+
     # ==========================================================================
     # TODO 5: Define SQL Constraints
     # ==========================================================================
@@ -159,27 +204,26 @@ class SchoolStudent(models.Model):
     # - unique_email: email must be unique
     # - check_date_of_birth: date_of_birth must be in the past
     # ==========================================================================
-    
+
     # YOUR CODE HERE - SQL Constraints
     _sql_constraints = [
         # ('unique_student_code', 'UNIQUE(student_code)', 'Student code must be unique!'),
         # TODO: Add more constraints
     ]
-    
-    
+
     # ==========================================================================
     # TODO 6: Define Python Constraints
     # ==========================================================================
     # Implement @api.constrains methods for:
-    # 
+    #
     # 6.1 _check_age: Validate that student is between 5 and 100 years old
     #
     # 6.2 _check_email_format: Validate email contains @ symbol
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Python Constraints
-    
-    @api.constrains('date_of_birth')
+
+    @api.constrains("date_of_birth")
     def _check_age(self):
         """
         TODO: Implement age validation
@@ -190,10 +234,9 @@ class SchoolStudent(models.Model):
         for record in self:
             # YOUR CODE HERE
             pass
-    
+
     # TODO: Implement _check_email_format method
-    
-    
+
     # ==========================================================================
     # TODO 7: Define Onchange Methods
     # ==========================================================================
@@ -204,14 +247,13 @@ class SchoolStudent(models.Model):
     #
     # 7.2 _onchange_date_of_birth: Show a warning if student is under 6 years old
     # ==========================================================================
-    
+
     # YOUR CODE HERE - Onchange Methods
-    
-    
+
     # ==========================================================================
     # TODO 8: Override CRUD Methods
     # ==========================================================================
-    # 
+    #
     # 8.1 Override create():
     #     - Generate student_code using sequence 'school.student.sequence'
     #     - Post a message "Student record created" to chatter
@@ -229,7 +271,7 @@ class SchoolStudent(models.Model):
     #     - Append " (Copy)" to the name
     #     - Reset state to 'draft'
     # ==========================================================================
-    
+
     @api.model_create_multi
     def create(self, vals_list):
         """
@@ -238,22 +280,23 @@ class SchoolStudent(models.Model):
         - Post creation message to chatter
         """
         for vals in vals_list:
-            if vals.get('student_code', _('New')) == _('New'):
-                vals['student_code'] = self.env['ir.sequence'].next_by_code('school.student.sequence') or _('New')
-        
+            if vals.get("student_code", _("New")) == _("New"):
+                vals["student_code"] = self.env["ir.sequence"].next_by_code(
+                    "school.student.sequence"
+                ) or _("New")
+
         records = super().create(vals_list)
-        
+
         # TODO: Post message to chatter for each record
-        
+
         return records
-    
+
     # TODO: Implement write override
-    
+
     # TODO: Implement unlink override
-    
+
     # TODO: Implement copy override
-    
-    
+
     # ==========================================================================
     # TODO 9: Implement State Transition Methods (Action Buttons)
     # ==========================================================================
@@ -276,7 +319,7 @@ class SchoolStudent(models.Model):
     # 9.6 action_reset_to_draft(): any state -> draft
     #     - Only allowed for users with manager group
     # ==========================================================================
-    
+
     def action_enroll(self):
         """
         TODO: Implement enrollment action
@@ -287,10 +330,9 @@ class SchoolStudent(models.Model):
         for record in self:
             # YOUR CODE HERE
             pass
-    
+
     # TODO: Implement remaining action methods
-    
-    
+
     # ==========================================================================
     # TODO 10: Implement Business Logic Methods
     # ==========================================================================
@@ -309,7 +351,7 @@ class SchoolStudent(models.Model):
     #      - Attendance rate >= 75
     #      - All required courses completed
     # ==========================================================================
-    
+
     def get_grade_summary(self):
         """
         TODO: Implement grade summary calculation
@@ -318,15 +360,14 @@ class SchoolStudent(models.Model):
         self.ensure_one()
         # YOUR CODE HERE
         return {
-            'total': 0,
-            'average': 0.0,
-            'highest': 0.0,
-            'lowest': 0.0,
+            "total": 0,
+            "average": 0.0,
+            "highest": 0.0,
+            "lowest": 0.0,
         }
-    
+
     # TODO: Implement remaining business methods
-    
-    
+
     # ==========================================================================
     # TODO 11: Implement Search and Name Methods
     # ==========================================================================
@@ -339,18 +380,24 @@ class SchoolStudent(models.Model):
     #
     # 11.2 Implement name_get alternative if needed (for special display)
     # ==========================================================================
-    
+
     @api.model
-    def _name_search(self, name='', domain=None, operator='ilike', limit=None, order=None):
+    def _name_search(
+        self, name="", domain=None, operator="ilike", limit=None, order=None
+    ):
         """
         TODO: Implement custom name search
         Allow searching by student_code, name, last_name, or email
         """
         domain = domain or []
         if name:
-            domain = ['|', '|', '|',
-                      ('student_code', operator, name),
-                      ('name', operator, name),
-                      ('last_name', operator, name),
-                      ('email', operator, name)] + domain
+            domain = [
+                "|",
+                "|",
+                "|",
+                ("student_code", operator, name),
+                ("name", operator, name),
+                ("last_name", operator, name),
+                ("email", operator, name),
+            ] + domain
         return self._search(domain, limit=limit, order=order)
