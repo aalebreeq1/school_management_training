@@ -177,6 +177,7 @@ class SchoolStudent(models.Model):
         string="Display Name",
         compute="_compute_display_name",
         store=True,
+        readonly=True
     )
 
     # TODO: Add age, total_courses, average_grade, attendance_rate fields
@@ -184,22 +185,100 @@ class SchoolStudent(models.Model):
 
     @api.depends("name", "last_name")
     def _compute_display_name(self):
-        """
-        TODO: Implement display_name computation
-        Format: "last_name, name" (e.g., "Smith, John")
-        Handle cases where last_name or name might be empty
-        """
         for record in self:
-            # YOUR CODE HERE
-            pass
+            if record.name and record.last_name:
+                record.display_name= f"{record.last_name} {record.name}"
+            else:
+                record.display_name=" "
+                
 
     # TODO: Implement _compute_age method
+    # 4.2 age: Integer field computed from date_of_birth
+    #     - Calculate years between date_of_birth and today
+    #     - Depends on: date_of_birth
+    
+    age=fields.Integer(
+        string="Age",
+        compute="_compute_age",
+        readonly=True,
+        store=True
+    )
+    
+    @api.depends("date_of_birth")
+    def _compute_age(self):
+        for record in self:
+            if record.date_of_birth:
+                today=fields.Date.today()
+                record.age= today.year - date_of_birth.year
+            else:
+                reocrd.age= 0
+
 
     # TODO: Implement _compute_total_courses method
-
+    # 4.3 total_courses: Integer field counting enrolled courses
+    #     - Count the number of records in enrollment_ids
+    #     - Depends on: enrollment_ids
+    
+    total_courses=fields.Integer(
+        string="Total Courses",
+        compute="_compute_total_courses",
+        readonly=True,
+        store=True
+    )
+    @api.depends("enrollment_ids")
+    def _compute_total_courses(self):
+        for record in self:
+            if record.enrollment_ids:
+                record.total_courses= len(enrollment_ids)
+            else:
+                record.total_courses= 0
     # TODO: Implement _compute_average_grade method
+    # 4.4 average_grade: Float field with digits=(5, 2)
+    #     - Calculate average of all grades from grade_ids
+    #     - Depends on: grade_ids.score
+    
+    average_grade = fields.Float(
+        string="Average Grade",
+        compute="_compute_average_grade",
+        store=True,
+        readonly=True
+    )
+    @api.depends("grade_ids")
+    def _compute_average_grade(self):
+        for record in self:
+            if grade_ids :
+                sum_grades= sum(record.grade_ids.score)
+                no_of_grade=len(record.grade_ids)
+                
+                record.average_grade= (sum_grade / no_of_grade) * 100
 
     # TODO: Implement _compute_attendance_rate method
+    # 4.5 attendance_rate: Float field with digits=(5, 2)
+    #     - Calculate percentage of 'present' attendance records
+    #     - Depends on: attendance_ids.status
+    
+    attendance_rate=record.Float(
+        string="Attendance Rate",
+        compute="_compute_attendance_rate",
+        store=True,
+        readonly=True
+    )
+    @api.depends("attendance_ids.status")  # Triggers when a status changes
+    def _compute_attendance_rate(self):
+        # Define the lambda function to count 'present' records
+        get_present_count = lambda p: len(p.attendance_ids.filtered(lambda a: a.status == 'present'))     
+        
+        for record in self:
+            total_days = len(record.attendance_ids) 
+            
+            if total_days > 0:
+                present_days = get_present_count(record)
+                record.attendance_rate = (present_days / total_days) * 100
+            else:
+                record.attendance_rate = 0.0  
+
+        
+        
 
     # ==========================================================================
     # TODO 5: Define SQL Constraints
