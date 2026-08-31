@@ -154,6 +154,7 @@ class SchoolAttendance(models.Model):
         for record in self:
             if record.date > fields.Date.today():
                 raise ValidationError("Date Cannot Be in The Future")
+
     # Remain one constraint
 
     # ==========================================================================
@@ -164,16 +165,16 @@ class SchoolAttendance(models.Model):
     # ==========================================================================
 
     # YOUR CODE HERE - Onchange methods
-    @api.onchange('check_in')
+    @api.onchange("check_in")
     def _onchange_check_in(self):
         if self.check_in.hour > 9:
-            self.status='late'
-            
-    @api.onchange('status')
+            self.status = "late"
+
+    @api.onchange("status")
     def _onchange_status(self):
-        if self.status =="excused":
-            self.is_excused=True
-                
+        if self.status == "excused":
+            self.is_excused = True
+
     # ==========================================================================
     # TODO 6: Implement Business Methods
     # ==========================================================================
@@ -186,14 +187,58 @@ class SchoolAttendance(models.Model):
     def mark_present(self):
         """TODO: Mark attendance as present with current time"""
         # YOUR CODE HERE
-        pass
+        self.status = "present"
+        self.check_in = fields.Datetime.now()
 
     def mark_absent(self):
         """TODO: Mark attendance as absent"""
         # YOUR CODE HERE
-        pass
+        self.status = "absent"
 
-    # TODO: Implement remaining methods
+    # TODO: Implement remaining 
+    @api.model
+    def get_student_attendance_summary(self, student_id, date_from, date_to):
+
+        records = self.search(
+            [
+                ("student_id", "=", student_id),
+                ("check_in", ">=", date_from),
+                ("check_in", "<=", date_to),
+            ]
+        )
+
+        total_days = len(records)
+
+        if total_days == 0:
+            return {
+                "total_days": 0,
+                "present_count": 0,
+                "absent_count": 0,
+                "late_count": 0,
+                "excused_count": 0,
+                "half_day_count": 0,
+                "attendance_rate": 0.0,
+            }
+        present_count = len(records.filtered(lambda r: r.status == "present"))
+        absent_count = len(records.filtered(lambda r: r.status == "absent"))
+        late_count = len(records.filtered(lambda r: r.status == "late"))
+        excused_count = len(records.filtered(lambda r: r.status == "excused"))
+        half_day_count = len(records.filtered(lambda r: r.status == "half_day"))
+
+        day_attended = present_count + late_count
+        attendance_rate = (day_attended / total_days) * 100
+
+        return {
+            "total_days": total_days,
+            "present_count": present_count,
+            "absent_count": absent_count,
+            "late_count": late_count,
+            "excused_count": excused_count,
+            "half_day_count": half_day_count,
+            "attendance_rate": round(attendance_rate, 2),
+        }
+
+    # - status: Selection (present, absent, late, excused, half_day)
 
     # ==========================================================================
     # TODO 7: Implement Batch/Bulk Operations
